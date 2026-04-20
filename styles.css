@@ -429,7 +429,7 @@ select,
 /* Rally Calculator Specific */
 .rally-row { 
   display: grid;
-  grid-template-columns: 1fr 140px 140px 48px;
+  grid-template-columns: minmax(160px, 1fr) 110px 110px 48px;
   gap: 12px;
   padding: 10px; 
   align-items: center; 
