@@ -74,6 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
   els.sameTimeTable = document.getElementById('sameTimeTable');
   els.nowClockSame = document.getElementById('nowClockSame');
   els.clearSameTime = document.getElementById('clearSameTime');
+  els.sameTimeBuffer = document.getElementById('sameTimeBuffer');
+  els.copySameTime = document.getElementById('copySameTime');
 
   els.gapInputs = document.getElementById('gapInputs');
   els.addRallyGap = document.getElementById('addRallyGap');
@@ -534,12 +536,16 @@ function initEvents() {
     }
   });
 
-  // Calculators
+  // Calculators state
+  let lastCalcResults = []; // to store chronological copy-paste data
+
   els.addRallySameTime.addEventListener('click', () => createRallyInputRow(els.sameTimeInputs, 'same'));
   els.clearSameTime.addEventListener('click', () => {
     clearContainer(els.sameTimeInputs);
     els.sameTimeTable.querySelector('tbody').innerHTML = '';
+    if(els.copySameTime) els.copySameTime.style.display = 'none';
   });
+  
   els.calcSameTime.addEventListener('click', () => {
     const rows = [...els.sameTimeInputs.querySelectorAll('.rally-row')];
     if (rows.length < 1) return alert('Add at least one rally.');
@@ -551,16 +557,27 @@ function initEvents() {
       const name = pid ? (state.players.find(p => p.id === pid)?.name ?? '(unknown)') : '(manual)';
       return { pid, name, march, left };
     });
+    
+    // Add buffer seconds to our target hit time so everyone departs later!
+    const bufferSec = els.sameTimeBuffer ? Number(els.sameTimeBuffer.value || 0) : 0;
     const hits = items.map(it => ({ ...it, hitAt: nowTs + secToMs(it.left + it.march) }));
-    const targetHit = Math.max(...hits.map(h => h.hitAt));
+    const targetHit = Math.max(...hits.map(h => h.hitAt)) + (bufferSec * 1000);
+    
     beepSuccess();
     const tbody = els.sameTimeTable.querySelector('tbody');
+    lastCalcResults = []; // reset results
+    
     tbody.innerHTML = hits.map(h => {
       const requiredLeftSec = Math.max(0, Math.round((targetHit - nowTs) / 1000) - Number(h.march));
       const callDiff = requiredLeftSec - Number(h.left); 
       const note = callDiff >= 0 ? `<span style="color:var(--friendly-text)">Call in ${callDiff}s</span>` : `<span style="color:var(--warn)">Already late by ${Math.abs(callDiff)}s</span>`;
-      const requiredDepartAt = new Date(nowTs + requiredLeftSec * 1000).toLocaleTimeString();
+      
+      const reqDate = new Date(nowTs + requiredLeftSec * 1000);
+      const requiredDepartAt = reqDate.toLocaleTimeString();
       const expectedHitTime = new Date(nowTs + (Number(h.left) + Number(h.march)) * 1000).toLocaleTimeString();
+      
+      lastCalcResults.push({ name: h.name, date: reqDate });
+      
       return `
         <tr>
           <td><strong>${escapeHtml(h.name)}</strong></td>
@@ -572,7 +589,47 @@ function initEvents() {
         </tr>
       `;
     }).join('');
+    
+    if(els.copySameTime) els.copySameTime.style.display = 'inline-flex';
   });
+
+  if (els.copySameTime) {
+    els.copySameTime.addEventListener('click', () => {
+      if (!lastCalcResults.length) return;
+      
+      // Sort chronologically
+      lastCalcResults.sort((a,b) => a.date - b.date);
+      
+      let lines = [];
+      let lastMin = null;
+      
+      lastCalcResults.forEach(r => {
+        const d = r.date;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        const minStr = `${hh}:${mm}`;
+        
+        if (lastMin !== null && lastMin !== minStr) {
+            lines.push(''); // blank line group separator
+        }
+        lastMin = minStr;
+        
+        const timeStr = `${hh}:${mm}:${ss}`;
+        lines.push(`${timeStr} ・・・${r.name}・・・・・`);
+      });
+      
+      const copyStr = lines.join('\n');
+      navigator.clipboard.writeText(copyStr).then(() => {
+        const originalText = els.copySameTime.innerHTML;
+        els.copySameTime.innerHTML = '✅ Copied!';
+        beepSuccess();
+        setTimeout(() => { els.copySameTime.innerHTML = originalText; }, 2000);
+      }).catch(err => {
+        alert('Failed to copy to clipboard.');
+      });
+    });
+  }
 
   els.addRallyGap.addEventListener('click', () => createRallyInputRow(els.gapInputs, 'gap'));
   els.clearGap.addEventListener('click', () => {
