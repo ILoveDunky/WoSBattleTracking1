@@ -144,10 +144,17 @@
         <div id="sameTimeInputs" class="full" style="display: flex; flex-direction: column; gap: 8px;"></div>
 
         <div class="form-actions full">
-          <div style="display:flex; gap:12px; align-items:center;">
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap: wrap;">
             <button type="button" id="addRallySameTime" class="btn ghost">+ Add Rally</button>
             <button type="button" id="clearSameTime" class="btn danger">Clear Grid</button>
+            
+            <div style="display:flex; align-items:center; gap:8px; margin-left:12px;">
+              <label for="sameTimeBuffer" style="color:var(--muted); font-size:13px; font-weight:600;">Delay Buffer (s):</label>
+              <input type="number" id="sameTimeBuffer" value="10" min="0" style="width: 70px; padding: 8px; text-align: center;" />
+            </div>
+
             <button type="button" id="calcSameTime" class="btn primary">Calculate Sync</button>
+            <button type="button" id="copySameTime" class="btn ghost" style="display: none;">📋 Copy Instructions</button>
           </div>
           <div style="margin-left:auto; color: var(--muted); font-size: 13px; font-weight: 600;">
             Current Time: <span id="nowClockSame" style="color: #fff;">—</span>
@@ -261,7 +268,7 @@
   <dialog id="instructionsDialog" class="modal">
     <h3>📖 How to use RAD Tracker</h3>
     <div class="prose">
-      <p>RAD Tracker is a kewl tool for a semi-kewl guy.</p>
+      <p>RAD Tracker is a kewl tool for a semi-kewl guy. It is designed to manage chaotic battles, track multiple rapid deployments, and synchronize rallies effectively.</p>
       
       <h4>1. Active Marches</h4>
       <ul>
