@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RAD Tracker | March & Buff</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <div class="logo">✦</div>
+      <div class="titles">
+        <h1>RAD Tracker</h1>
+        <p>Tactical March & Pet Buff Synchronization</p>
+      </div>
+    </div>
+    <div class="actions" style="display: flex; gap: 12px; align-items: center;">
+      <button id="addQuickDemo" class="btn ghost">Demo data</button>
+      <button id="helpBtn" class="btn primary">How to Use</button>
+      <button id="clearAll" class="btn danger">Clear all</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <h2>Add New Tracker</h2>
+      <form id="playerForm" class="form-grid">
+        <div class="form-field">
+          <label for="playerName">Player / Squad Name</label>
+          <input id="playerName" type="text" placeholder="e.g., RAD" required />
+        </div>
+        <div class="form-field">
+          <label for="target">Target / Objective</label>
+          <input id="target" type="text" placeholder="e.g., Center Tile, North Rally" />
+        </div>
+        <div class="form-field">
+          <label for="marchSeconds">March ETA (seconds)</label>
+          <input id="marchSeconds" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g., 45" required />
+          <small>Total travel time from your location</small>
+        </div>
+        <div class="form-field checkbox-field">
+          <label class="checkbox">
+            <input id="friendly" type="checkbox" checked />
+            <span style="color:#fff">Friendly Alliance</span>
+          </label>
+        </div>
+        <div class="form-field checkbox-field">
+          <label class="checkbox">
+            <input id="petBuffActive" type="checkbox" />
+            <span style="color:#fff">Pet Buff Active</span>
+          </label>
+        </div>
+        <div class="form-field">
+          <label for="petBuffMinutes">Pet buff time left (minutes)</label>
+          <input id="petBuffMinutes" type="number" inputmode="numeric" min="0" step="1" placeholder="e.g., 30" />
+          <small>Ignore if no buff is active</small>
+        </div>
+
+        <div class="form-field full checkbox-field" style="padding-top: 12px; justify-content: flex-start;">
+          <label class="checkbox">
+            <input id="startNow" type="checkbox" />
+            <span style="color:#fff">Start countdown immediately upon adding</span>
+          </label>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn primary">Add Tracker</button>
+          <button type="button" id="startAll" class="btn ghost">Start All Countdowns (S)</button>
+          <label style="margin-left:auto; display:flex; gap:8px; align-items:center; color: var(--muted); font-size:13px; font-weight:600;">
+            Compact View
+            <div class="checkbox"><input id="compactToggle" type="checkbox" /></div>
+          </label>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Active Marches</h2>
+        <div class="toolbar">
+          <div class="search">
+            <input id="searchInput" type="text" placeholder="Search by name or target... (/ to focus)" />
+          </div>
+          <div class="filters">
+            <select id="filterFriendly">
+              <option value="all">All Alignments</option>
+              <option value="friendly">Friendly only</option>
+              <option value="hostile">Hostile only</option>
+            </select>
+            <select id="sortBy">
+              <option value="timeLeftAsc">Time left ↑</option>
+              <option value="timeLeftDesc">Time left ↓</option>
+              <option value="nameAsc">Name A-Z</option>
+              <option value="nameDesc">Name Z-A</option>
+              <option value="createdDesc">Newest</option>
+              <option value="createdAsc">Oldest</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table" aria-label="Players march table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Target</th>
+              <th>Alignment</th>
+              <th style="width: 15%">March Progress</th>
+              <th>Arrives</th>
+              <th>Time left</th>
+              <th>Pet Buff</th>
+              <th style="width: 15%">Buff Duration</th>
+              <th>Controls</th>
+            </tr>
+          </thead>
+          <tbody id="playersBody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top: 16px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <button id="clearFinished" class="btn ghost">Clear Finished (C)</button>
+        <button id="exportData" class="btn ghost">Export Data</button>
+        <button id="importData" class="btn ghost">Import Data</button>
+        <input id="importFile" type="file" accept=".json" hidden />
+      </div>
+    </section>
+
+    <!-- Rally Sync Calculators -->
+    <section class="panel" aria-label="Rally calculators">
+      <div class="panel-head">
+        <h2>Rally Synchronization</h2>
+        <div class="kicker">Auto-fill march times directly from your tracked players. Up to 10 rallies simultaneously.</div>
+      </div>
+
+      <!-- Same-Time Rally Calculator -->
+      <div class="form-grid" style="margin-bottom:24px;">
+        <div class="form-field full">
+          <h3 style="margin: 0 0 4px 0; color: #fff; display: flex; align-items: center; gap: 8px;">🎯 Same-Time Calculator</h3>
+          <p class="kicker" style="margin: 0;">Calculates when each player should depart to ensure all rallies hit the target at the exact same moment.</p>
+        </div>
+
+        <div id="sameTimeInputs" class="full" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+        <div class="form-actions full">
+          <div style="display:flex; gap:12px; align-items:center;">
+            <button type="button" id="addRallySameTime" class="btn ghost">+ Add Rally</button>
+            <button type="button" id="clearSameTime" class="btn danger">Clear Grid</button>
+            <button type="button" id="calcSameTime" class="btn primary">Calculate Sync</button>
+          </div>
+          <div style="margin-left:auto; color: var(--muted); font-size: 13px; font-weight: 600;">
+            Current Time: <span id="nowClockSame" style="color: #fff;">—</span>
+          </div>
+        </div>
+
+        <div class="table-wrap full" style="margin-top:12px;">
+          <table class="table" id="sameTimeTable">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>March Time</th>
+                <th>Current Depart</th>
+                <th>Expected Hit</th>
+                <th>Required Depart</th>
+                <th>Action Note</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="height: 1px; background: var(--panel-border); margin: 32px 0;"></div>
+
+      <!-- Rally Gap Calculator -->
+      <div class="form-grid">
+        <div class="form-field full">
+          <h3 style="margin: 0 0 4px 0; color: #fff; display: flex; align-items: center; gap: 8px;">⏳ Gap Calculator</h3>
+          <p class="kicker" style="margin: 0;">Shows the expected hit times of multiple rallies and the exact gap (in seconds) from the fastest hit.</p>
+        </div>
+
+        <div id="gapInputs" class="full" style="display: flex; flex-direction: column; gap: 8px;"></div>
+
+        <div class="form-actions full">
+          <div style="display:flex;gap:12px;align-items:center;">
+            <button type="button" id="addRallyGap" class="btn ghost">+ Add Rally</button>
+            <button type="button" id="clearGap" class="btn danger">Clear Grid</button>
+            <button type="button" id="calcGap" class="btn primary">Calculate Gaps</button>
+          </div>
+          <div style="margin-left:auto; color: var(--muted); font-size: 13px; font-weight: 600;">
+            Current Time: <span id="nowClockGap" style="color: #fff;">—</span>
+          </div>
+        </div>
+
+        <div class="table-wrap full" style="margin-top:12px;">
+          <table class="table" id="gapTable">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>March Time</th>
+                <th>Depart In</th>
+                <th>Expected Hit</th>
+                <th>Gap from Fastest</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="app-footer">
+    <p>Data is saved locally in your browser to persist across sessions.</p>
+    <p>Press <strong>/</strong> to search, <strong>S</strong> to start all, <strong>C</strong> to clear finished.</p>
+  </footer>
+
+  <!-- Edit Player Modal -->
+  <dialog id="editDialog" class="modal">
+    <form method="dialog" id="editForm" class="form-grid">
+      <h3 style="grid-column: span 12; margin: 0 0 16px 0; color: #fff;">Edit Tracker</h3>
+      <input type="hidden" id="editId" />
+      <div class="form-field">
+        <label for="editName">Name</label>
+        <input id="editName" type="text" required />
+      </div>
+      <div class="form-field">
+        <label for="editTarget">Target / Note</label>
+        <input id="editTarget" type="text" />
+      </div>
+      <div class="form-field checkbox-field" style="padding-top: 28px;">
+        <label class="checkbox">
+          <input id="editFriendly" type="checkbox" />
+          <span style="color:#fff">Mark Friendly</span>
+        </label>
+      </div>
+      <div class="form-field">
+        <label for="editMarchSeconds">March ETA (sec)</label>
+        <input id="editMarchSeconds" type="number" inputmode="numeric" min="0" step="1" />
+      </div>
+      <div class="form-field checkbox-field" style="padding-top: 28px;">
+        <label class="checkbox">
+          <input id="editPetActive" type="checkbox" />
+          <span style="color:#fff">Pet Buff Active</span>
+        </label>
+      </div>
+      <div class="form-field">
+        <label for="editPetMinutes">Buff Time (min)</label>
+        <input id="editPetMinutes" type="number" inputmode="numeric" min="0" step="1" />
+      </div>
+      <div class="form-actions full" style="margin-top: 16px; justify-content: flex-end;">
+        <button id="editCancel" class="btn ghost" type="reset">Cancel</button>
+        <button id="editSave" class="btn primary" type="submit">Save Changes</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Instructions Modal -->
+  <dialog id="instructionsDialog" class="modal">
+    <h3>📖 How to use RAD Tracker</h3>
+    <div class="prose">
+      <p>RAD Tracker is a tactical timing tool designed to manage chaotic battles, track multiple rapid deployments, and synchronize rallies effectively.</p>
+      
+      <h4>1. Active Marches</h4>
+      <ul>
+        <li><strong>Add Trackers:</strong> Input the player's name, target, and march travel time (in seconds). Enable "Pet Buff Active" if they have a buff running.</li>
+        <li><strong>Start Countdown:</strong> You can start the countdown instantly by checking "Start countdown immediately", or manually click the <strong>Start</strong> button in the Active Marches table when the march begins.</li>
+        <li><strong>Visual Cues:</strong> The rows will turn orange and pulse when a march is under 15 seconds or a buff is under 60 seconds from finishing. An audio beep will also play upon completion.</li>
+      </ul>
+
+      <h4>2. Rally Synchronization</h4>
+      <p>There are two primary calculators for complex alliance maneuvers:</p>
+      <ul>
+        <li><strong>Same-Time Calculator:</strong> If you want 5 different players to hit a target at the exact same second, plug in their March Times and when they are currently expected to depart. The calculator will find the slowest hit time, and tell you exactly how many seconds each other player needs to delay their departure by to perfectly sync the hit.</li>
+        <li><strong>Gap Calculator:</strong> If you want to see a cascading hit order. Put in everyone's data and it will tell you exactly how many seconds gap there is between the fastest player hitting and the slowest player hitting.</li>
+      </ul>
+
+      <h4>3. Ease of Use & Persistence</h4>
+      <ul>
+        <li><strong>Auto-Save:</strong> All data, including compact view toggles and player targets, is saved to your browser automatically. It persists even if you reload the page.</li>
+        <li><strong>Keyboard Shortcuts:</strong> Press <strong>/</strong> to focus the search bar instantly. Press <strong>S</strong> to start all unstarted timers. Press <strong>C</strong> to clear finished timers.</li>
+      </ul>
+    </div>
+    <div style="margin-top: 24px; display: flex; justify-content: flex-end;">
+      <button id="closeInstructions" class="btn primary">Got it, let's go!</button>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
