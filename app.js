@@ -231,6 +231,7 @@ function startMarch(id) {
   const ts = now();
   const ms = secToMs(p.marchEtaSec);
   updatePlayer(id, { marchStart: ms ? ts : null, marchEnd: ms ? ts + ms : null, notified: false });
+  beep(80, 400, 0.05);
 }
 function stopMarch(id) { updatePlayer(id, { marchStart: null, marchEnd: null, notified: false }); }
 
@@ -238,18 +239,20 @@ function startBuff(id) {
   const p = state.players.find(x => x.id === id);
   if (!p) return;
   const ts = now();
+  if (!p.petBuffMinutes || p.petBuffMinutes <= 0) p.petBuffMinutes = 120;
   const ms = minToMs(p.petBuffMinutes);
   updatePlayer(id, {
     petBuffActive: true,
     petBuffStart: ms ? ts : null,
     petBuffEnd: ms ? ts + ms : null,
     buffNotified: false,
+    petBuffMinutes: p.petBuffMinutes
   });
+  beep(80, 500, 0.05);
 }
 function stopBuff(id) { updatePlayer(id, { petBuffActive: false, petBuffStart: null, petBuffEnd: null, buffNotified: false }); }
 
 // ---- audio alert ----
-let audioCtx = null;
 function beep(duration = 150, freq = 880, vol = 0.08) {
   if (!ALERT_CONFIG.beepEnabled) return;
   try {
@@ -266,6 +269,10 @@ function beep(duration = 150, freq = 880, vol = 0.08) {
   } catch (e) {
     console.warn('Beep failed', e);
   }
+}
+function beepSuccess() {
+  beep(80, 800, 0.05);
+  setTimeout(() => beep(120, 1200, 0.05), 100);
 }
 
 // ---- render ----
@@ -546,6 +553,7 @@ function initEvents() {
     });
     const hits = items.map(it => ({ ...it, hitAt: nowTs + secToMs(it.left + it.march) }));
     const targetHit = Math.max(...hits.map(h => h.hitAt));
+    beepSuccess();
     const tbody = els.sameTimeTable.querySelector('tbody');
     tbody.innerHTML = hits.map(h => {
       const requiredLeftSec = Math.max(0, Math.round((targetHit - nowTs) / 1000) - Number(h.march));
@@ -584,6 +592,7 @@ function initEvents() {
       return { pid, name, march, left, hitFromNowSec, hitAtTs: nowTs + secToMs(march + left) };
     });
     const minHit = Math.min(...items.map(i => i.hitFromNowSec));
+    beepSuccess();
     const tbody = els.gapTable.querySelector('tbody');
     tbody.innerHTML = items.map(it => {
       return `
@@ -617,9 +626,9 @@ function initEvents() {
 
   els.addQuickDemo.addEventListener('click', () => {
     const demo = [
-      { name: 'RAD', target: 'Center tile', friendly: true, marchEtaSec: 45, petBuffActive: true, petBuffMinutes: 25 },
-      { name: 'Warlord', target: 'North rally', friendly: false, marchEtaSec: 20, petBuffActive: false, petBuffMinutes: 0 },
-      { name: 'Echo', target: 'Scout', friendly: true, marchEtaSec: 12, petBuffActive: true, petBuffMinutes: 10 },
+      { name: 'RAD', target: 'Castle', friendly: true, marchEtaSec: 45, petBuffActive: true, petBuffMinutes: 120 },
+      { name: 'Warlord', target: 'South East Turret', friendly: false, marchEtaSec: 20, petBuffActive: false, petBuffMinutes: 0 },
+      { name: 'Echo', target: 'North West Turret', friendly: true, marchEtaSec: 12, petBuffActive: true, petBuffMinutes: 120 },
     ];
     demo.forEach(d => addPlayer({
       id: uid(),
