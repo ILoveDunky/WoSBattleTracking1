@@ -238,6 +238,17 @@ select,
   box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
 }
 
+.btn.success { 
+  background: #10b981; 
+  color: #fff; 
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+.btn.success:hover { 
+  background: #059669; 
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.5);
+}
+
 .btn.danger { 
   background: rgba(239, 68, 68, 0.2); 
   color: var(--red-hover); 
