@@ -600,6 +600,8 @@ function initEvents() {
       // Sort chronologically
       lastCalcResults.sort((a,b) => a.date - b.date);
       
+      const maxNameLen = Math.max(...lastCalcResults.map(r => r.name.length), 0);
+      
       let lines = [];
       let lastMin = null;
       
@@ -616,7 +618,8 @@ function initEvents() {
         lastMin = minStr;
         
         const timeStr = `${hh}:${mm}:${ss}`;
-        lines.push(`${timeStr} ・・・${r.name}・・・・・`);
+        const paddedName = r.name.padEnd(maxNameLen, ' ');
+        lines.push(`${timeStr} ・・・ ${paddedName} ・・・・・`);
       });
       
       const copyStr = lines.join('\n');
